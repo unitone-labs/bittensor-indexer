@@ -1,0 +1,45 @@
+# Global owners - require review for all changes
+* @alfred-smith-dev
+
+# Core library files - require specific expertise
+/src/lib.rs @alfred-smith-dev
+/src/indexer.rs @alfred-smith-dev
+/src/builder.rs @alfred-smith-dev
+/src/config.rs @alfred-smith-dev
+
+# Error handling - critical for stability
+/src/error.rs @alfred-smith-dev
+
+# Handler system - core functionality
+/src/handler.rs @alfred-smith-dev
+/src/handler_group.rs @alfred-smith-dev
+
+# Storage implementations - require database expertise
+/src/storage/ @alfred-smith-dev
+
+# Type definitions
+/src/types.rs @alfred-smith-dev
+/src/validated_types.rs @alfred-smith-dev
+
+# Examples - user-facing, require documentation review
+/examples/ @alfred-smith-dev
+
+# Tests - critical for project stability
+/tests/ @alfred-smith-dev
+
+# Documentation
+/README.md @alfred-smith-dev
+/CONTRIBUTING.md @alfred-smith-dev
+/CHANGELOG.md @alfred-smith-dev
+
+# Configuration files
+/Cargo.toml @alfred-smith-dev
+/Cargo.lock @alfred-smith-dev
+
+# CI/CD and GitHub configuration
+/.github/ @alfred-smith-dev
+
+# License files - require legal review
+/LICENSE @alfred-smith-dev
+/NOTICE @alfred-smith-dev
+/COPYRIGHT @alfred-smith-dev

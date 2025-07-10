@@ -1,0 +1,42 @@
+Flamewire Bittensor Indexer
+Copyright 2025 Flamewire
+
+This product includes software developed by the Flamewire project.
+
+This software contains code derived from various open source projects.
+See the individual source files for specific attribution information.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+================================================================================
+
+This product includes the following third-party components:
+
+subxt
+Copyright (c) 2019-2024 Parity Technologies (UK) Ltd.
+Licensed under the Apache License, Version 2.0 or MIT License
+
+tokio
+Copyright (c) 2019 Tokio Contributors
+Licensed under the MIT License
+
+sqlx
+Copyright (c) 2019 Ryan Leckey
+Licensed under the Apache License, Version 2.0 or MIT License
+
+serde
+Copyright (c) 2014 Erick Tryzelaar
+Licensed under the Apache License, Version 2.0 or MIT License
+
+For a complete list of third-party components and their licenses,
+see the Cargo.lock file in this distribution.

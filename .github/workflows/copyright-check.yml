@@ -1,0 +1,66 @@
+name: Copyright Check
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  copyright-check:
+    name: Verify Copyright Headers
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check copyright headers
+        run: |
+          echo "Checking copyright headers in Rust files..."
+
+          MISSING_FILES=()
+
+          # Check all Rust source files
+          while IFS= read -r -d '' file; do
+            if ! grep -q "Copyright.*Flamewire" "$file"; then
+              MISSING_FILES+=("$file")
+            fi
+          done < <(find src/ examples/ tests/ -name "*.rs" -type f -print0)
+
+          if [ ${#MISSING_FILES[@]} -gt 0 ]; then
+            echo "❌ Files missing copyright headers:"
+            printf '%s\n' "${MISSING_FILES[@]}"
+            echo ""
+            echo "Please add the copyright header to these files."
+            echo "You can use the add_copyright.sh script to do this automatically."
+            exit 1
+          else
+            echo "✅ All files have proper copyright headers!"
+          fi
+
+      - name: Check license file exists
+        run: |
+          if [ ! -f LICENSE ]; then
+            echo "❌ LICENSE file is missing!"
+            exit 1
+          fi
+
+          if [ ! -f NOTICE ]; then
+            echo "❌ NOTICE file is missing!"
+            exit 1
+          fi
+
+          echo "✅ License files are present!"
+
+      - name: Verify license in Cargo.toml
+        run: |
+          if ! grep -q 'license = "Apache-2.0"' Cargo.toml; then
+            echo "❌ Cargo.toml must specify Apache-2.0 license!"
+            exit 1
+          fi
+
+          if ! grep -q 'Flamewire' Cargo.toml; then
+            echo "❌ Cargo.toml must credit Flamewire!"
+            exit 1
+          fi
+
+          echo "✅ Cargo.toml has correct license information!"
