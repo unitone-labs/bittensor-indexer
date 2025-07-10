@@ -22,7 +22,9 @@ use flamewire_bittensor_indexer::CheckpointStore;
 use flamewire_bittensor_indexer::IndexerError;
 use flamewire_bittensor_indexer::{ChainEvent, EventFilter};
 use std::sync::Arc;
+use subxt::config::substrate::SubstrateConfig;
 use subxt::events::Phase;
+use subxt::utils::H256;
 
 async fn process_blocks(
     handler: Arc<MockHandler>,
@@ -47,11 +49,11 @@ async fn process_blocks(
     ];
 
     for (num, evs) in blocks {
-        let ctx = Context::new(num);
+        let ctx = Context::<SubstrateConfig>::new(num, H256::zero());
         handler.handle_block(&ctx, &evs).await?;
-        for ev in evs.iter() {
+        for (index, ev) in evs.iter().enumerate() {
             let ev = ev?;
-            let ce = ChainEvent::new(ev);
+            let ce = ChainEvent::new(ev, index as u32);
             if let Err(e) = handler.handle_event(&ce, &ctx).await {
                 handler.handle_error(&e, &ctx).await;
             }

@@ -853,7 +853,7 @@ dependencies = [
 
 [[package]]
 name = "flamewire-bittensor-indexer"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "async-trait",
  "frame-metadata",

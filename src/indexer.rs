@@ -211,7 +211,7 @@ where
             self.update_metadata(&rpc, hash).await?;
             let block = self.client.blocks().at(hash).await?;
             let events = block.events().await?;
-            self.process_events(current_block, &events).await?;
+            self.process_events(current_block, hash, &events).await?;
             self.with_circuit_breaker(|| async {
                 self.store.store_checkpoint(current_block).await
             })
@@ -237,7 +237,7 @@ where
 
             self.update_metadata(&rpc, block.hash()).await?;
             let events = block.events().await?;
-            self.process_events(number, &events).await?;
+            self.process_events(number, block.hash(), &events).await?;
             self.with_circuit_breaker(|| async { self.store.store_checkpoint(number).await })
                 .await?;
 
@@ -256,9 +256,10 @@ where
     async fn process_events(
         &self,
         block_number: BlockNumber,
+        block_hash: HashFor<C>,
         events: &Events<C>,
     ) -> Result<(), IndexerError> {
-        let ctx = Context::new(block_number);
+        let ctx = Context::new(block_number, block_hash);
 
         for handler in &self.handlers {
             if let Err(e) = handler.handle_block(&ctx, events).await {
@@ -266,7 +267,7 @@ where
             }
         }
 
-        for evt_result in events.iter() {
+        for (index, evt_result) in events.iter().enumerate() {
             let evt = match evt_result {
                 Ok(evt) => evt,
                 Err(e) => {
@@ -280,7 +281,7 @@ where
             };
             let pallet = evt.pallet_name().to_string();
             let variant = evt.variant_name().to_string();
-            let chain_event = ChainEvent::new(evt);
+            let chain_event = ChainEvent::new(evt, index as u32);
 
             for handler in &self.handlers {
                 let filter = handler.event_filter();

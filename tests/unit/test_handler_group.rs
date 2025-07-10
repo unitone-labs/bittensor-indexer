@@ -25,6 +25,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use subxt::config::substrate::SubstrateConfig;
 use subxt::events::{Events, Phase};
+use subxt::utils::H256;
 use tokio::time::sleep;
 
 struct TestHandler {
@@ -80,7 +81,7 @@ impl Handler<SubstrateConfig> for TestHandler {
     async fn handle_event(
         &self,
         _event: &ChainEvent<SubstrateConfig>,
-        ctx: &Context,
+        ctx: &Context<SubstrateConfig>,
     ) -> Result<(), IndexerError> {
         if self.delay != Duration::ZERO {
             sleep(self.delay).await;
@@ -108,7 +109,7 @@ impl Handler<SubstrateConfig> for TestHandler {
 
     async fn handle_block(
         &self,
-        _ctx: &Context,
+        _ctx: &Context<SubstrateConfig>,
         _events: &Events<SubstrateConfig>,
     ) -> Result<(), IndexerError> {
         if self.delay != Duration::ZERO {
@@ -118,7 +119,7 @@ impl Handler<SubstrateConfig> for TestHandler {
         Ok(())
     }
 
-    async fn handle_error(&self, error: &IndexerError, _ctx: &Context) {
+    async fn handle_error(&self, error: &IndexerError, _ctx: &Context<SubstrateConfig>) {
         self.errors.lock().unwrap().push(format!("{error}"));
     }
 }
@@ -136,12 +137,12 @@ async fn test_sequential_execution_order() {
         .add(TestHandler::new("1", log.clone(), errs.clone()))
         .add(TestHandler::new("2", log.clone(), errs.clone()))
         .add(TestHandler::new("3", log.clone(), errs.clone()));
-    let ctx = Context::new(1);
+    let ctx = Context::<SubstrateConfig>::new(1, H256::zero());
     group.handle_block(&ctx, &evs).await.unwrap();
-    for ev in evs.iter() {
+    for (index, ev) in evs.iter().enumerate() {
         let ev = ev.unwrap();
         group
-            .handle_event(&ChainEvent::new(ev), &ctx)
+            .handle_event(&ChainEvent::new(ev, index as u32), &ctx)
             .await
             .unwrap();
     }
@@ -165,11 +166,11 @@ async fn test_tolerant_mode_continues() {
     let group = HandlerGroup::new()
         .add(TestHandler::new("1", log.clone(), errs.clone()).fail_event())
         .add(TestHandler::new("2", log.clone(), errs.clone()));
-    let ctx = Context::new(1);
-    for ev in evs.iter() {
+    let ctx = Context::<SubstrateConfig>::new(1, H256::zero());
+    for (index, ev) in evs.iter().enumerate() {
         let ev = ev.unwrap();
         group
-            .handle_event(&ChainEvent::new(ev), &ctx)
+            .handle_event(&ChainEvent::new(ev, index as u32), &ctx)
             .await
             .unwrap();
     }
@@ -191,9 +192,9 @@ async fn test_strict_mode_stops_on_error() {
         .strict()
         .add(TestHandler::new("1", log.clone(), errs.clone()).fail_event())
         .add(TestHandler::new("2", log.clone(), errs.clone()));
-    let ctx = Context::new(1);
+    let ctx = Context::<SubstrateConfig>::new(1, H256::zero());
     let ev = evs.iter().next().unwrap().unwrap();
-    let res = group.handle_event(&ChainEvent::new(ev), &ctx).await;
+    let res = group.handle_event(&ChainEvent::new(ev, 0), &ctx).await;
     assert!(res.is_err());
     let calls = log.lock().unwrap().clone();
     assert_eq!(calls, vec!["event-1"]);
@@ -209,9 +210,9 @@ async fn test_parallel_performance() {
     );
     let ce = {
         let ev = evs.iter().next().unwrap().unwrap();
-        ChainEvent::new(ev)
+        ChainEvent::new(ev, 0)
     };
-    let ctx = Context::new(1);
+    let ctx = Context::<SubstrateConfig>::new(1, H256::zero());
     let log_seq = Arc::new(Mutex::new(Vec::new()));
     let err_seq = Arc::new(Mutex::new(Vec::new()));
     let seq_group = HandlerGroup::new()
@@ -258,10 +259,10 @@ async fn test_parallel_error_collection() {
     let group = HandlerGroup::parallel()
         .add(TestHandler::new("1", log.clone(), errs1.clone()).fail_event())
         .add(TestHandler::new("2", log.clone(), errs2.clone()).fail_event());
-    let ctx = Context::new(1);
+    let ctx = Context::<SubstrateConfig>::new(1, H256::zero());
     let ev = evs.iter().next().unwrap().unwrap();
     group
-        .handle_event(&ChainEvent::new(ev), &ctx)
+        .handle_event(&ChainEvent::new(ev, 0), &ctx)
         .await
         .unwrap();
     assert_eq!(errs1.lock().unwrap().len(), 1);
@@ -280,10 +281,10 @@ async fn test_pipeline_data_flow() {
     let h1 = TestHandler::new("1", log.clone(), errs.clone()).set_data("num", 42);
     let h2 = TestHandler::new("2", log.clone(), errs.clone()).get_data("num");
     let group = HandlerGroup::new().add(h1).pipe_to(h2);
-    let ctx = Context::new(1);
+    let ctx = Context::<SubstrateConfig>::new(1, H256::zero());
     let ev = evs.iter().next().unwrap().unwrap();
     group
-        .handle_event(&ChainEvent::new(ev), &ctx)
+        .handle_event(&ChainEvent::new(ev, 0), &ctx)
         .await
         .unwrap();
     let calls = log.lock().unwrap();
@@ -313,10 +314,10 @@ async fn test_conditional_handler() {
             e.variant_name() == "A"
         })
         .add(uncond);
-    let ctx = Context::new(1);
+    let ctx = Context::<SubstrateConfig>::new(1, H256::zero());
     let ev = ev_a.iter().next().unwrap().unwrap();
     group
-        .handle_event(&ChainEvent::new(ev), &ctx)
+        .handle_event(&ChainEvent::new(ev, 0), &ctx)
         .await
         .unwrap();
     assert_eq!(
@@ -330,7 +331,7 @@ async fn test_conditional_handler() {
     log.lock().unwrap().clear();
     let ev = ev_b.iter().next().unwrap().unwrap();
     group
-        .handle_event(&ChainEvent::new(ev), &ctx)
+        .handle_event(&ChainEvent::new(ev, 0), &ctx)
         .await
         .unwrap();
     assert_eq!(

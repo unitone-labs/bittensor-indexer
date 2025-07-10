@@ -22,11 +22,12 @@ pub type BlockNumber = u64;
 
 pub struct ChainEvent<C: Config> {
     inner: EventDetails<C>,
+    pub index: u32,
 }
 
 impl<C: Config> ChainEvent<C> {
-    pub fn new(inner: EventDetails<C>) -> Self {
-        Self { inner }
+    pub fn new(inner: EventDetails<C>, index: u32) -> Self {
+        Self { inner, index }
     }
 
     pub fn pallet_name(&self) -> &str {

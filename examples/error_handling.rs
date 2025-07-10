@@ -33,7 +33,7 @@ impl Handler<SubstrateConfig> for FailingHandler {
     async fn handle_event(
         &self,
         _event: &ChainEvent<SubstrateConfig>,
-        ctx: &Context,
+        ctx: &Context<SubstrateConfig>,
     ) -> Result<(), IndexerError> {
         let attempt = self.count.fetch_add(1, Ordering::SeqCst);
         println!(
@@ -47,7 +47,7 @@ impl Handler<SubstrateConfig> for FailingHandler {
         })
     }
 
-    async fn handle_error(&self, error: &IndexerError, _ctx: &Context) {
+    async fn handle_error(&self, error: &IndexerError, _ctx: &Context<SubstrateConfig>) {
         println!("{error}");
     }
 }
@@ -62,7 +62,7 @@ impl Handler<SubstrateConfig> for DatabaseSaver {
     async fn handle_event(
         &self,
         _event: &ChainEvent<SubstrateConfig>,
-        ctx: &Context,
+        ctx: &Context<SubstrateConfig>,
     ) -> Result<(), IndexerError> {
         if self.circuit_breaker.is_open() {
             println!(
@@ -91,7 +91,7 @@ impl Handler<SubstrateConfig> for DatabaseSaver {
         Ok(())
     }
 
-    async fn handle_error(&self, error: &IndexerError, _ctx: &Context) {
+    async fn handle_error(&self, error: &IndexerError, _ctx: &Context<SubstrateConfig>) {
         println!("{error}");
     }
 }
