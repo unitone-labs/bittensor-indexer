@@ -44,7 +44,7 @@ impl Handler<SubstrateConfig> for TransferExtractor {
     async fn handle_event(
         &self,
         event: &ChainEvent<SubstrateConfig>,
-        ctx: &Context,
+        ctx: &Context<SubstrateConfig>,
     ) -> Result<(), IndexerError> {
         if let Some(transfer) = event.as_event::<TransferEvent>()? {
             // Pass data to next handlers in the pipeline
@@ -62,7 +62,7 @@ impl Handler<SubstrateConfig> for TransferPrinter {
     async fn handle_event(
         &self,
         _event: &ChainEvent<SubstrateConfig>,
-        ctx: &Context,
+        ctx: &Context<SubstrateConfig>,
     ) -> Result<(), IndexerError> {
         if let Some(transfer) = ctx.get_pipeline_data::<TransferEvent>("transfer") {
             println!(

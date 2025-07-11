@@ -113,7 +113,7 @@ impl Handler<SubstrateConfig> for MockHandler {
     async fn handle_event(
         &self,
         event: &ChainEvent<SubstrateConfig>,
-        _ctx: &Context,
+        _ctx: &Context<SubstrateConfig>,
     ) -> Result<(), IndexerError> {
         self.events.lock().unwrap().push(format!(
             "{}.{}",
@@ -133,7 +133,7 @@ impl Handler<SubstrateConfig> for MockHandler {
 
     async fn handle_block(
         &self,
-        ctx: &Context,
+        ctx: &Context<SubstrateConfig>,
         _events: &Events<SubstrateConfig>,
     ) -> Result<(), IndexerError> {
         self.events
@@ -143,7 +143,7 @@ impl Handler<SubstrateConfig> for MockHandler {
         Ok(())
     }
 
-    async fn handle_error(&self, error: &IndexerError, _ctx: &Context) {
+    async fn handle_error(&self, error: &IndexerError, _ctx: &Context<SubstrateConfig>) {
         self.errors.lock().unwrap().push(format!("{error}"));
     }
 }

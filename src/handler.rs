@@ -20,18 +20,21 @@ use async_trait::async_trait;
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Mutex;
+use subxt::config::HashFor;
 use subxt::events::Events;
 use subxt::Config;
 
-pub struct Context {
+pub struct Context<C: Config> {
     pub block_number: u64,
+    pub block_hash: HashFor<C>,
     pipeline: Mutex<HashMap<String, Box<dyn Any + Send + Sync>>>,
 }
 
-impl Context {
-    pub fn new(block_number: u64) -> Self {
+impl<C: Config> Context<C> {
+    pub fn new(block_number: u64, block_hash: HashFor<C>) -> Self {
         Self {
             block_number,
+            block_hash,
             pipeline: Mutex::new(HashMap::new()),
         }
     }
@@ -99,11 +102,15 @@ pub trait Handler<C: Config>: Send + Sync {
         EventFilter::all()
     }
 
-    async fn handle_event(&self, event: &ChainEvent<C>, ctx: &Context) -> Result<(), IndexerError>;
+    async fn handle_event(
+        &self,
+        event: &ChainEvent<C>,
+        ctx: &Context<C>,
+    ) -> Result<(), IndexerError>;
 
-    async fn handle_block(&self, ctx: &Context, events: &Events<C>) -> Result<(), IndexerError> {
+    async fn handle_block(&self, ctx: &Context<C>, events: &Events<C>) -> Result<(), IndexerError> {
         Ok(())
     }
 
-    async fn handle_error(&self, error: &IndexerError, ctx: &Context) {}
+    async fn handle_error(&self, error: &IndexerError, ctx: &Context<C>) {}
 }

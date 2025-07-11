@@ -96,7 +96,11 @@ where
         EventFilter::all()
     }
 
-    async fn handle_event(&self, event: &ChainEvent<C>, ctx: &Context) -> Result<(), IndexerError> {
+    async fn handle_event(
+        &self,
+        event: &ChainEvent<C>,
+        ctx: &Context<C>,
+    ) -> Result<(), IndexerError> {
         if self.parallel {
             let futures: Vec<_> = self
                 .handlers
@@ -135,7 +139,7 @@ where
         Ok(())
     }
 
-    async fn handle_block(&self, ctx: &Context, events: &Events<C>) -> Result<(), IndexerError> {
+    async fn handle_block(&self, ctx: &Context<C>, events: &Events<C>) -> Result<(), IndexerError> {
         if self.parallel {
             let futures: Vec<_> = self
                 .handlers
@@ -166,7 +170,7 @@ where
         Ok(())
     }
 
-    async fn handle_error(&self, error: &IndexerError, ctx: &Context) {
+    async fn handle_error(&self, error: &IndexerError, ctx: &Context<C>) {
         for h in &self.handlers {
             h.handle_error(error, ctx).await;
         }
@@ -190,7 +194,11 @@ where
         self.handler.event_filter()
     }
 
-    async fn handle_event(&self, event: &ChainEvent<C>, ctx: &Context) -> Result<(), IndexerError> {
+    async fn handle_event(
+        &self,
+        event: &ChainEvent<C>,
+        ctx: &Context<C>,
+    ) -> Result<(), IndexerError> {
         if (self.pred)(event) {
             self.handler.handle_event(event, ctx).await
         } else {
@@ -198,11 +206,11 @@ where
         }
     }
 
-    async fn handle_block(&self, ctx: &Context, events: &Events<C>) -> Result<(), IndexerError> {
+    async fn handle_block(&self, ctx: &Context<C>, events: &Events<C>) -> Result<(), IndexerError> {
         self.handler.handle_block(ctx, events).await
     }
 
-    async fn handle_error(&self, error: &IndexerError, ctx: &Context) {
+    async fn handle_error(&self, error: &IndexerError, ctx: &Context<C>) {
         self.handler.handle_error(error, ctx).await;
     }
 }

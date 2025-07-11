@@ -71,7 +71,7 @@ impl Handler<SubstrateConfig> for EventLogger {
     async fn handle_event(
         &self,
         event: &ChainEvent<SubstrateConfig>,
-        ctx: &Context,
+        ctx: &Context<SubstrateConfig>,
     ) -> Result<(), IndexerError> {
         println!(
             "Block {}: {}.{}", 
@@ -125,7 +125,7 @@ impl Handler<SubstrateConfig> for TransferProcessor {
     async fn handle_event(
         &self,
         event: &ChainEvent<SubstrateConfig>,
-        ctx: &Context,
+        ctx: &Context<SubstrateConfig>,
     ) -> Result<(), IndexerError> {
         if let Some(transfer) = event.as_event::<TransferEvent>()? {
             println!(
@@ -136,7 +136,7 @@ impl Handler<SubstrateConfig> for TransferProcessor {
         Ok(())
     }
 
-    async fn handle_error(&self, error: &IndexerError, ctx: &Context) {
+    async fn handle_error(&self, error: &IndexerError, ctx: &Context<SubstrateConfig>) {
         eprintln!("Error processing transfer at block {}: {}", ctx.block_number, error);
     }
 }
@@ -268,13 +268,13 @@ impl Handler<SubstrateConfig> for RobustHandler {
     async fn handle_event(
         &self,
         event: &ChainEvent<SubstrateConfig>,
-        ctx: &Context,
+        ctx: &Context<SubstrateConfig>,
     ) -> Result<(), IndexerError> {
         // Your processing logic
         Ok(())
     }
 
-    async fn handle_error(&self, error: &IndexerError, ctx: &Context) {
+    async fn handle_error(&self, error: &IndexerError, ctx: &Context<SubstrateConfig>) {
         match error {
             IndexerError::ConnectionFailed { url, source } => {
                 eprintln!("Connection failed to {}: {}", url, source);
@@ -308,7 +308,7 @@ impl Handler<SubstrateConfig> for ExternalServiceHandler {
     async fn handle_event(
         &self,
         event: &ChainEvent<SubstrateConfig>,
-        ctx: &Context,
+        ctx: &Context<SubstrateConfig>,
     ) -> Result<(), IndexerError> {
         if self.circuit_breaker.is_open() {
             println!("Circuit breaker open - skipping external service call");
@@ -363,7 +363,7 @@ impl Handler<SubstrateConfig> for DynamicHandler {
     async fn handle_event(
         &self,
         event: &ChainEvent<SubstrateConfig>,
-        ctx: &Context,
+        ctx: &Context<SubstrateConfig>,
     ) -> Result<(), IndexerError> {
         if self.target_pallets.contains(&event.pallet_name().to_string()) {
             // Process this event
@@ -384,7 +384,7 @@ impl Handler<SubstrateConfig> for DataExtractor {
     async fn handle_event(
         &self,
         event: &ChainEvent<SubstrateConfig>,
-        ctx: &Context,
+        ctx: &Context<SubstrateConfig>,
     ) -> Result<(), IndexerError> {
         if let Some(transfer) = event.as_event::<TransferEvent>()? {
             // Store data for next handler in pipeline
@@ -401,7 +401,7 @@ impl Handler<SubstrateConfig> for DataProcessor {
     async fn handle_event(
         &self,
         _event: &ChainEvent<SubstrateConfig>,
-        ctx: &Context,
+        ctx: &Context<SubstrateConfig>,
     ) -> Result<(), IndexerError> {
         // Retrieve data from previous handler
         if let Some(transfer) = ctx.get_pipeline_data::<TransferEvent>("transfer") {

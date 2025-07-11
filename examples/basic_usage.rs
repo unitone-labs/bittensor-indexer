@@ -26,7 +26,7 @@ impl Handler<SubstrateConfig> for PrintHandler {
     async fn handle_event(
         &self,
         event: &ChainEvent<SubstrateConfig>,
-        ctx: &Context,
+        ctx: &Context<SubstrateConfig>,
     ) -> Result<(), IndexerError> {
         println!(
             "Block {}: {}.{}",

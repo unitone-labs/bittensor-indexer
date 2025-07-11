@@ -43,7 +43,7 @@ impl Handler<SubstrateConfig> for TransferExtractor {
     async fn handle_event(
         &self,
         event: &ChainEvent<SubstrateConfig>,
-        ctx: &Context,
+        ctx: &Context<SubstrateConfig>,
     ) -> Result<(), IndexerError> {
         if let Some(transfer) = event.as_event::<TransferEvent>()? {
             ctx.set_pipeline_data("transfer", transfer);
@@ -59,7 +59,7 @@ impl Handler<SubstrateConfig> for DatabaseSaver {
     async fn handle_event(
         &self,
         _event: &ChainEvent<SubstrateConfig>,
-        ctx: &Context,
+        ctx: &Context<SubstrateConfig>,
     ) -> Result<(), IndexerError> {
         if ctx
             .peek_pipeline_data::<TransferEvent>("transfer")
@@ -78,7 +78,7 @@ impl Handler<SubstrateConfig> for BackupSaver {
     async fn handle_event(
         &self,
         _event: &ChainEvent<SubstrateConfig>,
-        ctx: &Context,
+        ctx: &Context<SubstrateConfig>,
     ) -> Result<(), IndexerError> {
         if ctx
             .peek_pipeline_data::<TransferEvent>("transfer")
@@ -97,7 +97,7 @@ impl Handler<SubstrateConfig> for MetricsCollector {
     async fn handle_event(
         &self,
         _event: &ChainEvent<SubstrateConfig>,
-        ctx: &Context,
+        ctx: &Context<SubstrateConfig>,
     ) -> Result<(), IndexerError> {
         if ctx
             .peek_pipeline_data::<TransferEvent>("transfer")

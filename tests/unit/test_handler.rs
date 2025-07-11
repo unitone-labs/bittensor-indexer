@@ -19,7 +19,9 @@ mod common;
 use common::*;
 use flamewire_bittensor_indexer::handler::{Context, EventFilter, Handler};
 use flamewire_bittensor_indexer::types::ChainEvent;
+use subxt::config::substrate::SubstrateConfig;
 use subxt::events::Phase;
+use subxt::utils::H256;
 
 #[tokio::test]
 async fn event_filter_matches() {
@@ -38,12 +40,12 @@ async fn handler_flow() {
         vec![EventRecord::new(Phase::Initialization, TestEvent::A(1))],
     );
     let handler = MockHandler::new(EventFilter::all());
-    let ctx = Context::new(1);
+    let ctx = Context::<SubstrateConfig>::new(1, H256::zero());
 
     handler.handle_block(&ctx, &evs).await.unwrap();
-    for ev in evs.iter() {
+    for (index, ev) in evs.iter().enumerate() {
         let ev = ev.unwrap();
-        let ce = ChainEvent::new(ev);
+        let ce = ChainEvent::new(ev, index as u32);
         handler.handle_event(&ce, &ctx).await.unwrap();
     }
 
@@ -61,11 +63,11 @@ async fn handler_error_path() {
     );
     let mut handler = MockHandler::new(EventFilter::all());
     handler.fail = true;
-    let ctx = Context::new(2);
+    let ctx = Context::<SubstrateConfig>::new(2, H256::zero());
 
-    for ev in evs.iter() {
+    for (index, ev) in evs.iter().enumerate() {
         let ev = ev.unwrap();
-        let ce = ChainEvent::new(ev);
+        let ce = ChainEvent::new(ev, index as u32);
         let res = handler.handle_event(&ce, &ctx).await;
         assert!(res.is_err());
         handler

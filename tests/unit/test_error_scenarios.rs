@@ -30,6 +30,7 @@ use std::sync::{
 use std::time::Duration;
 use subxt::config::substrate::SubstrateConfig;
 use subxt::events::Phase;
+use subxt::utils::H256;
 use subxt::Error as SubxtError;
 
 #[tokio::test]
@@ -189,14 +190,14 @@ async fn conflicting_handlers_continue_processing() {
     let mut handler_fail = MockHandler::new(EventFilter::all());
     handler_fail.fail = true;
     let handler_fail = Arc::new(handler_fail);
-    let ctx = Context::new(1);
+    let ctx = Context::<SubstrateConfig>::new(1, H256::zero());
 
     handler_ok.handle_block(&ctx, &evs).await.unwrap();
     handler_fail.handle_block(&ctx, &evs).await.unwrap();
 
-    for ev in evs.iter() {
+    for (index, ev) in evs.iter().enumerate() {
         let ev = ev.unwrap();
-        let ce = ChainEvent::new(ev);
+        let ce = ChainEvent::new(ev, index as u32);
         handler_ok.handle_event(&ce, &ctx).await.unwrap();
         let res = handler_fail.handle_event(&ce, &ctx).await;
         assert!(res.is_err());
