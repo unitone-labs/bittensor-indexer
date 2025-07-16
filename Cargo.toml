@@ -1,6 +1,6 @@
 [package]
 name = "flamewire-bittensor-indexer"
-version = "0.1.1"
+version = "0.1.2"
 license = "Apache-2.0"
 authors = ["Flamewire <contact@flamewire.io>"]
 edition = "2021"
@@ -31,7 +31,6 @@ tracing-subscriber = "0.3.19"
 scale-value = "0.18.0"
 scale-decode = { version = "0.16.0", features = ["derive"] }
 parity-scale-codec = { version = "3.7.5", features = ["derive"] }
-
 
 [features]
 default = ["json-storage"]
