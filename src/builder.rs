@@ -94,7 +94,7 @@ where
         self
     }
 
-    /// Set a maximum number of blocks to process per second.
+    /// Set a maximum number of blocks to process per minute.
     pub fn max_blocks_per_minute(mut self, value: u32) -> Self {
         self.max_blocks_per_minute = Some(value);
         self
