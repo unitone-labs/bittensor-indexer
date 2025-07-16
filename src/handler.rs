@@ -106,7 +106,9 @@ pub trait Handler<C: Config>: Send + Sync {
         &self,
         event: &ChainEvent<C>,
         ctx: &Context<C>,
-    ) -> Result<(), IndexerError>;
+    ) -> Result<(), IndexerError> {
+        Ok(())
+    }
 
     async fn handle_block(&self, ctx: &Context<C>, events: &Events<C>) -> Result<(), IndexerError> {
         Ok(())

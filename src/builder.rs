@@ -33,6 +33,7 @@ pub struct IndexerBuilder<C: Config> {
     database_url: Option<String>,
     start_block: Option<BlockNumber>,
     end_block: Option<BlockNumber>,
+    max_blocks_per_minute: Option<u32>,
     handlers: Vec<Box<dyn Handler<C>>>,
     _marker: PhantomData<C>,
 }
@@ -57,6 +58,7 @@ where
             database_url: None,
             start_block: None,
             end_block: None,
+            max_blocks_per_minute: None,
             handlers: Vec::new(),
             _marker: PhantomData,
         }
@@ -89,6 +91,12 @@ where
     /// End indexing at the specified block.
     pub fn end_at_block(mut self, block: BlockNumber) -> Self {
         self.end_block = Some(block);
+        self
+    }
+
+    /// Set a maximum number of blocks to process per second.
+    pub fn max_blocks_per_minute(mut self, value: u32) -> Self {
+        self.max_blocks_per_minute = Some(value);
         self
     }
 
@@ -126,6 +134,7 @@ where
         let config = cfg_builder.build()?;
 
         let mut indexer = Indexer::new(client, store, config).await?;
+        indexer.max_blocks_per_minute = self.max_blocks_per_minute;
         for h in self.handlers {
             indexer.add_dyn_handler(h)?;
         }

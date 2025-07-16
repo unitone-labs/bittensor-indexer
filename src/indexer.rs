@@ -21,6 +21,7 @@ use crate::retry::{retry_with_backoff, CircuitBreaker, RetryConfig};
 use crate::storage::CheckpointStore;
 use crate::types::{BlockNumber, ChainEvent};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 use subxt::backend::BackendExt;
 use subxt::config::HashFor;
 use subxt::config::Header;
@@ -39,6 +40,7 @@ pub struct Indexer<C: Config> {
     handlers: Vec<Arc<dyn Handler<C>>>,
     store: Box<dyn CheckpointStore>,
     config: IndexerConfig,
+    pub(crate) max_blocks_per_minute: Option<u32>,
 }
 
 impl<C> Indexer<C>
@@ -57,6 +59,7 @@ where
             handlers: Vec::new(),
             store,
             config,
+            max_blocks_per_minute: None,
         })
     }
 
@@ -198,6 +201,7 @@ where
                     return Ok(());
                 }
             }
+            let block_start = Instant::now();
             let hash = self
                 .with_circuit_breaker(|| async {
                     rpc.chain_get_block_hash(Some(current_block.into()))
@@ -216,6 +220,24 @@ where
                 self.store.store_checkpoint(current_block).await
             })
             .await?;
+            tracing::debug!(
+                "Finished processing block {}, all events consumed.",
+                current_block
+            );
+
+            let elapsed = block_start.elapsed();
+            let min_block_duration = self
+                .max_blocks_per_minute
+                .map(|bpm| Duration::from_secs_f64(60.0 / bpm as f64));
+
+            if let Some(wait) = min_block_duration {
+                if elapsed < wait {
+                    let to_wait = wait - elapsed;
+                    tracing::debug!("Throttling: sleeping {:?} to respect rate limits", to_wait);
+                    tokio::time::sleep(to_wait).await;
+                }
+            }
+
             current_block += 1;
         }
 
@@ -235,11 +257,26 @@ where
                 continue;
             }
 
+            let block_start = Instant::now();
             self.update_metadata(&rpc, block.hash()).await?;
             let events = block.events().await?;
             self.process_events(number, block.hash(), &events).await?;
             self.with_circuit_breaker(|| async { self.store.store_checkpoint(number).await })
                 .await?;
+            tracing::debug!("Finished processing block {}, all events consumed.", number);
+
+            let elapsed = block_start.elapsed();
+            let min_block_duration = self
+                .max_blocks_per_minute
+                .map(|bpm| Duration::from_secs_f64(60.0 / bpm as f64));
+
+            if let Some(wait) = min_block_duration {
+                if elapsed < wait {
+                    let to_wait = wait - elapsed;
+                    tracing::debug!("Throttling: sleeping {:?} to respect rate limits", to_wait);
+                    tokio::time::sleep(to_wait).await;
+                }
+            }
 
             current_block = number + 1;
 

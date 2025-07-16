@@ -18,6 +18,7 @@ use flamewire_bittensor_indexer::prelude::{
     async_trait, AccountId32, ChainEvent, Context, Decode, DecodeAsType, EventFilter, Handler,
     HandlerGroup, IndexerBuilder, IndexerError, StaticEvent, SubstrateConfig, WebSocketUrl,
 };
+use tracing::info;
 
 /// Simple data structure extracted from Balances `Transfer` events
 #[derive(Debug, Decode, DecodeAsType)]
@@ -65,9 +66,12 @@ impl Handler<SubstrateConfig> for TransferPrinter {
         ctx: &Context<SubstrateConfig>,
     ) -> Result<(), IndexerError> {
         if let Some(transfer) = ctx.get_pipeline_data::<TransferEvent>("transfer") {
-            println!(
-                "Block {} -> {} sent {} units to {}",
-                ctx.block_number, transfer.from, transfer.amount, transfer.to
+            info!(
+                block = ctx.block_number,
+                from = %transfer.from,
+                to = %transfer.to,
+                amount = transfer.amount,
+                "Transfer event"
             );
         }
         Ok(())
@@ -76,7 +80,13 @@ impl Handler<SubstrateConfig> for TransferPrinter {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    tracing_subscriber::fmt::init();
+    // Init tracing subscriber with DEBUG level
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::DEBUG)
+        .with_target(false)
+        .with_level(true)
+        .compact()
+        .init();
 
     // Build a sequential pipeline: Extract -> Transform -> Save
     let pipeline = HandlerGroup::new()
@@ -88,8 +98,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "wss://archive.chain.opentensor.ai:443",
         )?)
         .start_from_block(1017)
-        .end_at_block(1033)
+        .end_at_block(1133)
         .add_handler_group(pipeline)
+        .max_blocks_per_minute(12) // Optional throttling
         .build()
         .await?;
 
