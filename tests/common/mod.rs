@@ -134,7 +134,7 @@ impl Handler<SubstrateConfig> for MockHandler {
     async fn handle_block(
         &self,
         ctx: &Context<SubstrateConfig>,
-        _events: &Events<SubstrateConfig>,
+        _events: &[ChainEvent<SubstrateConfig>],
     ) -> Result<(), IndexerError> {
         self.events
             .lock()

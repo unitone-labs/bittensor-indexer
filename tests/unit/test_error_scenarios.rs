@@ -192,14 +192,20 @@ async fn conflicting_handlers_continue_processing() {
     let handler_fail = Arc::new(handler_fail);
     let ctx = Context::<SubstrateConfig>::new(1, H256::zero());
 
-    handler_ok.handle_block(&ctx, &evs).await.unwrap();
-    handler_fail.handle_block(&ctx, &evs).await.unwrap();
+    let chain_events: Vec<ChainEvent<SubstrateConfig>> = evs
+        .iter()
+        .enumerate()
+        .map(|(i, e)| ChainEvent::new(e.unwrap(), i as u32))
+        .collect();
+    handler_ok.handle_block(&ctx, &chain_events).await.unwrap();
+    handler_fail
+        .handle_block(&ctx, &chain_events)
+        .await
+        .unwrap();
 
-    for (index, ev) in evs.iter().enumerate() {
-        let ev = ev.unwrap();
-        let ce = ChainEvent::new(ev, index as u32);
-        handler_ok.handle_event(&ce, &ctx).await.unwrap();
-        let res = handler_fail.handle_event(&ce, &ctx).await;
+    for ce in &chain_events {
+        handler_ok.handle_event(ce, &ctx).await.unwrap();
+        let res = handler_fail.handle_event(ce, &ctx).await;
         assert!(res.is_err());
         handler_fail
             .handle_error(res.as_ref().err().unwrap(), &ctx)

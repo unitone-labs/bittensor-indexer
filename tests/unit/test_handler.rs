@@ -42,11 +42,14 @@ async fn handler_flow() {
     let handler = MockHandler::new(EventFilter::all());
     let ctx = Context::<SubstrateConfig>::new(1, H256::zero());
 
-    handler.handle_block(&ctx, &evs).await.unwrap();
-    for (index, ev) in evs.iter().enumerate() {
-        let ev = ev.unwrap();
-        let ce = ChainEvent::new(ev, index as u32);
-        handler.handle_event(&ce, &ctx).await.unwrap();
+    let ces: Vec<ChainEvent<SubstrateConfig>> = evs
+        .iter()
+        .enumerate()
+        .map(|(i, e)| ChainEvent::new(e.unwrap(), i as u32))
+        .collect();
+    handler.handle_block(&ctx, &ces).await.unwrap();
+    for ce in &ces {
+        handler.handle_event(ce, &ctx).await.unwrap();
     }
 
     let calls = handler.events.lock().unwrap();

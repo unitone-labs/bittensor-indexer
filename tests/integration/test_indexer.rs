@@ -50,11 +50,13 @@ async fn process_blocks(
 
     for (num, evs) in blocks {
         let ctx = Context::<SubstrateConfig>::new(num, H256::zero());
-        handler.handle_block(&ctx, &evs).await?;
-        for (index, ev) in evs.iter().enumerate() {
-            let ev = ev?;
-            let ce = ChainEvent::new(ev, index as u32);
-            if let Err(e) = handler.handle_event(&ce, &ctx).await {
+        let mut ces = Vec::new();
+        for (i, e) in evs.iter().enumerate() {
+            ces.push(ChainEvent::new(e?, i as u32));
+        }
+        handler.handle_block(&ctx, &ces).await?;
+        for ce in &ces {
+            if let Err(e) = handler.handle_event(ce, &ctx).await {
                 handler.handle_error(&e, &ctx).await;
             }
         }
