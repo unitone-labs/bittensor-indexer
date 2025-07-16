@@ -24,7 +24,7 @@ use flamewire_bittensor_indexer::{ChainEvent, IndexerError};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use subxt::config::substrate::SubstrateConfig;
-use subxt::events::{Events, Phase};
+use subxt::events::Phase;
 use subxt::utils::H256;
 use tokio::time::sleep;
 
@@ -110,7 +110,7 @@ impl Handler<SubstrateConfig> for TestHandler {
     async fn handle_block(
         &self,
         _ctx: &Context<SubstrateConfig>,
-        _events: &Events<SubstrateConfig>,
+        _events: &[ChainEvent<SubstrateConfig>],
     ) -> Result<(), IndexerError> {
         if self.delay != Duration::ZERO {
             sleep(self.delay).await;
@@ -138,13 +138,14 @@ async fn test_sequential_execution_order() {
         .add(TestHandler::new("2", log.clone(), errs.clone()))
         .add(TestHandler::new("3", log.clone(), errs.clone()));
     let ctx = Context::<SubstrateConfig>::new(1, H256::zero());
-    group.handle_block(&ctx, &evs).await.unwrap();
-    for (index, ev) in evs.iter().enumerate() {
-        let ev = ev.unwrap();
-        group
-            .handle_event(&ChainEvent::new(ev, index as u32), &ctx)
-            .await
-            .unwrap();
+    let chain_events: Vec<ChainEvent<SubstrateConfig>> = evs
+        .iter()
+        .enumerate()
+        .map(|(i, e)| ChainEvent::new(e.unwrap(), i as u32))
+        .collect();
+    group.handle_block(&ctx, &chain_events).await.unwrap();
+    for ce in &chain_events {
+        group.handle_event(ce, &ctx).await.unwrap();
     }
     let calls = log.lock().unwrap().clone();
     assert_eq!(

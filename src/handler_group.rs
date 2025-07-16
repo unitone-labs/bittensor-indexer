@@ -20,7 +20,6 @@ use crate::types::ChainEvent;
 use async_trait::async_trait;
 use futures::future::join_all;
 use std::marker::PhantomData;
-use subxt::events::Events;
 use subxt::Config;
 
 /// A group of handlers that can be added as a single unit.
@@ -139,7 +138,11 @@ where
         Ok(())
     }
 
-    async fn handle_block(&self, ctx: &Context<C>, events: &Events<C>) -> Result<(), IndexerError> {
+    async fn handle_block(
+        &self,
+        ctx: &Context<C>,
+        events: &[ChainEvent<C>],
+    ) -> Result<(), IndexerError> {
         if self.parallel {
             let futures: Vec<_> = self
                 .handlers
@@ -206,7 +209,11 @@ where
         }
     }
 
-    async fn handle_block(&self, ctx: &Context<C>, events: &Events<C>) -> Result<(), IndexerError> {
+    async fn handle_block(
+        &self,
+        ctx: &Context<C>,
+        events: &[ChainEvent<C>],
+    ) -> Result<(), IndexerError> {
         self.handler.handle_block(ctx, events).await
     }
 

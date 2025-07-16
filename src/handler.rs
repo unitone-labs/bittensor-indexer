@@ -21,7 +21,6 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Mutex;
 use subxt::config::HashFor;
-use subxt::events::Events;
 use subxt::Config;
 
 pub struct Context<C: Config> {
@@ -110,7 +109,11 @@ pub trait Handler<C: Config>: Send + Sync {
         Ok(())
     }
 
-    async fn handle_block(&self, ctx: &Context<C>, events: &Events<C>) -> Result<(), IndexerError> {
+    async fn handle_block(
+        &self,
+        ctx: &Context<C>,
+        events: &[ChainEvent<C>],
+    ) -> Result<(), IndexerError> {
         Ok(())
     }
 

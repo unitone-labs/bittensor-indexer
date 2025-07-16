@@ -201,7 +201,6 @@ where
                     return Ok(());
                 }
             }
-            let block_start = Instant::now();
             let hash = self
                 .with_circuit_breaker(|| async {
                     rpc.chain_get_block_hash(Some(current_block.into()))
@@ -212,32 +211,8 @@ where
                 .ok_or(IndexerError::BlockNotFound {
                     block: current_block,
                 })?;
-            self.update_metadata(&rpc, hash).await?;
-            let block = self.client.blocks().at(hash).await?;
-            let events = block.events().await?;
-            self.process_events(current_block, hash, &events).await?;
-            self.with_circuit_breaker(|| async {
-                self.store.store_checkpoint(current_block).await
-            })
-            .await?;
-            tracing::debug!(
-                "Finished processing block {}, all events consumed.",
-                current_block
-            );
 
-            let elapsed = block_start.elapsed();
-            let min_block_duration = self
-                .max_blocks_per_minute
-                .map(|bpm| Duration::from_secs_f64(60.0 / bpm as f64));
-
-            if let Some(wait) = min_block_duration {
-                if elapsed < wait {
-                    let to_wait = wait - elapsed;
-                    tracing::debug!("Throttling: sleeping {:?} to respect rate limits", to_wait);
-                    tokio::time::sleep(to_wait).await;
-                }
-            }
-
+            self.process_block(&rpc, current_block, hash).await?;
             current_block += 1;
         }
 
@@ -257,33 +232,43 @@ where
                 continue;
             }
 
-            let block_start = Instant::now();
-            self.update_metadata(&rpc, block.hash()).await?;
-            let events = block.events().await?;
-            self.process_events(number, block.hash(), &events).await?;
-            self.with_circuit_breaker(|| async { self.store.store_checkpoint(number).await })
-                .await?;
-            tracing::debug!("Finished processing block {}, all events consumed.", number);
-
-            let elapsed = block_start.elapsed();
-            let min_block_duration = self
-                .max_blocks_per_minute
-                .map(|bpm| Duration::from_secs_f64(60.0 / bpm as f64));
-
-            if let Some(wait) = min_block_duration {
-                if elapsed < wait {
-                    let to_wait = wait - elapsed;
-                    tracing::debug!("Throttling: sleeping {:?} to respect rate limits", to_wait);
-                    tokio::time::sleep(to_wait).await;
-                }
-            }
-
+            self.process_block(&rpc, number, block.hash()).await?;
             current_block = number + 1;
 
             if let Some(end) = end_block {
                 if number >= end {
                     break;
                 }
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn process_block(
+        &self,
+        rpc: &LegacyRpcMethods<C>,
+        number: BlockNumber,
+        hash: HashFor<C>,
+    ) -> Result<(), IndexerError> {
+        let block_start = Instant::now();
+        self.update_metadata(rpc, hash).await?;
+        let block = self.client.blocks().at(hash).await?;
+        let events = block.events().await?;
+        self.process_events(number, hash, &events).await?;
+        self.with_circuit_breaker(|| async { self.store.store_checkpoint(number).await })
+            .await?;
+        tracing::debug!("Finished processing block {}, all events consumed.", number);
+
+        let elapsed = block_start.elapsed();
+        if let Some(min_dur) = self
+            .max_blocks_per_minute
+            .map(|bpm| Duration::from_secs_f64(60.0 / bpm as f64))
+        {
+            if elapsed < min_dur {
+                let to_wait = min_dur - elapsed;
+                tracing::debug!("Throttling: sleeping {:?} to respect rate limits", to_wait);
+                tokio::time::sleep(to_wait).await;
             }
         }
 
@@ -298,12 +283,7 @@ where
     ) -> Result<(), IndexerError> {
         let ctx = Context::new(block_number, block_hash);
 
-        for handler in &self.handlers {
-            if let Err(e) = handler.handle_block(&ctx, events).await {
-                handler.handle_error(&e, &ctx).await;
-            }
-        }
-
+        let mut decoded = Vec::new();
         for (index, evt_result) in events.iter().enumerate() {
             let evt = match evt_result {
                 Ok(evt) => evt,
@@ -316,14 +296,23 @@ where
                     });
                 }
             };
-            let pallet = evt.pallet_name().to_string();
-            let variant = evt.variant_name().to_string();
-            let chain_event = ChainEvent::new(evt, index as u32);
+            decoded.push(ChainEvent::new(evt, index as u32));
+        }
+
+        for handler in &self.handlers {
+            if let Err(e) = handler.handle_block(&ctx, &decoded).await {
+                handler.handle_error(&e, &ctx).await;
+            }
+        }
+
+        for chain_event in &decoded {
+            let pallet = chain_event.pallet_name().to_string();
+            let variant = chain_event.variant_name().to_string();
 
             for handler in &self.handlers {
                 let filter = handler.event_filter();
                 if filter.matches(&pallet, &variant) {
-                    if let Err(e) = handler.handle_event(&chain_event, &ctx).await {
+                    if let Err(e) = handler.handle_event(chain_event, &ctx).await {
                         handler.handle_error(&e, &ctx).await;
                     }
                 }
