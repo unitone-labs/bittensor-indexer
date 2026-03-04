@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
+use crate::conditional_handler::ConditionalHandler;
 use crate::error::IndexerError;
 use crate::handler::{Context, EventFilter, Handler};
 use crate::types::ChainEvent;
+
 use async_trait::async_trait;
 use futures::future::join_all;
 use std::marker::PhantomData;
@@ -45,7 +47,7 @@ impl<C: Config> HandlerGroup<C> {
         }
     }
 
-    /// Create a handler group that runs handlers in parallel
+    /// Create a handler group that runs handlers in parallel.
     pub fn parallel() -> Self {
         Self {
             handlers: Vec::new(),
@@ -61,13 +63,13 @@ impl<C: Config> HandlerGroup<C> {
         self
     }
 
-    /// Enable strict mode which aborts execution on the first handler error
+    /// Enable strict mode which aborts on the first handler error.
     pub fn strict(mut self) -> Self {
         self.strict = true;
         self
     }
 
-    /// Add a handler that will only run when the predicate returns true.
+    /// Add a handler that runs only when the predicate returns true.
     pub fn add_conditional<F>(mut self, handler: impl Handler<C> + 'static, pred: F) -> Self
     where
         F: Fn(&ChainEvent<C>) -> bool + Send + Sync + 'static,
@@ -80,7 +82,7 @@ impl<C: Config> HandlerGroup<C> {
         self
     }
 
-    /// Shortcut for building simple pipelines.
+    /// Shortcut for building pipelines.
     pub fn pipe_to(self, handler: impl Handler<C> + 'static) -> Self {
         self.add(handler)
     }
@@ -177,47 +179,5 @@ where
         for h in &self.handlers {
             h.handle_error(error, ctx).await;
         }
-    }
-}
-
-struct ConditionalHandler<C: Config, H: Handler<C>, F> {
-    handler: H,
-    pred: F,
-    _marker: PhantomData<C>,
-}
-
-#[async_trait]
-impl<C, H, F> Handler<C> for ConditionalHandler<C, H, F>
-where
-    C: Config + Send + Sync + 'static,
-    H: Handler<C> + 'static,
-    F: Fn(&ChainEvent<C>) -> bool + Send + Sync + 'static,
-{
-    fn event_filter(&self) -> EventFilter {
-        self.handler.event_filter()
-    }
-
-    async fn handle_event(
-        &self,
-        event: &ChainEvent<C>,
-        ctx: &Context<C>,
-    ) -> Result<(), IndexerError> {
-        if (self.pred)(event) {
-            self.handler.handle_event(event, ctx).await
-        } else {
-            Ok(())
-        }
-    }
-
-    async fn handle_block(
-        &self,
-        ctx: &Context<C>,
-        events: &[ChainEvent<C>],
-    ) -> Result<(), IndexerError> {
-        self.handler.handle_block(ctx, events).await
-    }
-
-    async fn handle_error(&self, error: &IndexerError, ctx: &Context<C>) {
-        self.handler.handle_error(error, ctx).await;
     }
 }

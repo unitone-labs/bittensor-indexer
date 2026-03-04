@@ -112,6 +112,36 @@ where
         self
     }
 
+    /// Add a PostgreSQL state handler from config.
+    #[cfg(feature = "postgres-state")]
+    pub async fn with_pg_state(
+        self,
+        config: &crate::types::storage_config::PgStateConfig,
+    ) -> Result<Self, IndexerError> {
+        let handler = crate::storage::pg_state::PostgresStateHandler::new(config).await?;
+        Ok(self.add_handler(handler))
+    }
+
+    /// Add a ClickHouse analytics handler from config.
+    #[cfg(feature = "clickhouse")]
+    pub async fn with_clickhouse(
+        self,
+        config: crate::types::storage_config::ClickHouseConfig,
+    ) -> Result<Self, IndexerError> {
+        let handler = crate::storage::clickhouse::ClickHouseHandler::new(config).await?;
+        Ok(self.add_handler(handler))
+    }
+
+    /// Add a Redis cache handler from config.
+    #[cfg(feature = "redis-cache")]
+    pub async fn with_redis_cache(
+        self,
+        config: crate::types::storage_config::RedisCacheConfig,
+    ) -> Result<Self, IndexerError> {
+        let handler = crate::storage::redis_cache::RedisCacheHandler::new(config).await?;
+        Ok(self.add_handler(handler))
+    }
+
     /// Build the indexer.
     pub async fn build(self) -> Result<Indexer<C>, IndexerError> {
         let node_url = self

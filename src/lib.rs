@@ -14,19 +14,24 @@
  * limitations under the License.
  */
 
+pub(crate) mod block_processor;
 pub mod builder;
+pub(crate) mod conditional_handler;
 pub mod config;
+pub mod decoder;
 pub mod error;
 pub mod handler;
 pub mod handler_group;
 pub mod indexer;
 pub mod prelude;
 pub mod retry;
+pub mod run;
 pub mod storage;
 pub mod types;
 pub mod validated_types;
 
 pub use crate::builder::IndexerBuilder;
+pub use crate::decoder::BittensorDecoder;
 pub use crate::config::IndexerConfig;
 pub use crate::error::IndexerError;
 pub use crate::handler::{Context, EventFilter, Handler};
@@ -36,3 +41,10 @@ pub use crate::retry::{retry_with_backoff, CircuitBreaker, RetryConfig};
 pub use crate::storage::CheckpointStore;
 pub use crate::types::{BlockNumber, ChainEvent};
 pub use crate::validated_types::{PostgresUrl, SqliteUrl, WebSocketUrl};
+
+#[cfg(feature = "postgres-state")]
+pub use crate::storage::pg_state::PostgresStateHandler;
+#[cfg(feature = "clickhouse")]
+pub use crate::storage::clickhouse::ClickHouseHandler;
+#[cfg(feature = "redis-cache")]
+pub use crate::storage::redis_cache::RedisCacheHandler;

@@ -93,7 +93,9 @@ fn is_retryable_subxt_error(err: &subxt::Error) -> bool {
 
 pub fn is_retryable_error(err: &IndexerError) -> bool {
     match err {
-        IndexerError::BlockNotFound { .. } | IndexerError::InvalidConfig { .. } => false,
+        IndexerError::BlockNotFound { .. }
+        | IndexerError::InvalidConfig { .. }
+        | IndexerError::EventDecodingFailed { .. } => false,
         IndexerError::Subxt(e)
         | IndexerError::ConnectionFailed { source: e, .. }
         | IndexerError::MetadataUpdateFailed { source: e } => is_retryable_subxt_error(e.as_ref()),

@@ -44,7 +44,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-flamewire-bittensor-indexer = "0.1.0"
+flamewire-bittensor-indexer = "0.2.0"
 
 # With optional features
 flamewire-bittensor-indexer = { version = "0.1.0", features = ["postgres", "sqlite"] }
@@ -86,7 +86,7 @@ impl Handler<SubstrateConfig> for EventLogger {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut indexer = IndexerBuilder::<SubstrateConfig>::new()
-        .connect(WebSocketUrl::parse("wss://archive.chain.opentensor.ai:443")?)
+        .connect(WebSocketUrl::parse("wss://gateway-dev.flamewire.io/public/rpc/bittensor")?)
         .start_from_block(1000)
         .add_handler(EventLogger)
         .build()
@@ -142,7 +142,43 @@ impl Handler<SubstrateConfig> for TransferProcessor {
 }
 ```
 
-## 🏗️ Handler Groups & Pipelines
+## Decoding Blocks and Events
+
+`BittensorDecoder` is a built-in handler that converts raw block and event data into structured, JSON-serializable types. Decoded data is stored in the pipeline for downstream handlers to consume.
+
+### Decoded Types
+
+- **`DecodedBlock`** -- `block_number` (u64), `block_hash` (String), `extrinsic_count` (u32), `event_count` (u32)
+- **`DecodedExtrinsic`** -- `index` (u32), `pallet` (String), `call` (String), `signer` (Option\<String\>), `args` (serde_json::Value)
+- **`DecodedEvent`** -- `index` (u32), `pallet` (String), `variant` (String), `fields` (serde_json::Value)
+
+### Usage
+
+```rust
+use flamewire_bittensor_indexer::prelude::*;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut indexer = IndexerBuilder::<SubstrateConfig>::new()
+        .connect(WebSocketUrl::parse("wss://gateway-dev.flamewire.io/public/rpc/bittensor")?)
+        .start_from_block(1000)
+        .add_handler(BittensorDecoder)
+        .build()
+        .await?;
+
+    indexer.run().await?;
+    Ok(())
+}
+```
+
+After each block, the pipeline contains:
+
+- `"decoded_block"` -- a `DecodedBlock` with block metadata
+- `"decoded_events"` -- a `Vec<DecodedEvent>` with all decoded events from the block
+
+Downstream handlers can retrieve these via `ctx.get_pipeline_data::<DecodedBlock>("decoded_block")` and `ctx.get_pipeline_data::<Vec<DecodedEvent>>("decoded_events")`.
+
+## Handler Groups & Pipelines
 
 ### Sequential Processing Pipeline
 
@@ -153,7 +189,7 @@ let pipeline = HandlerGroup::new()
     .pipe_to(DataSaver);     // Save to database
 
 let mut indexer = IndexerBuilder::<SubstrateConfig>::new()
-    .connect(WebSocketUrl::parse("wss://node.url")?)
+    .connect(WebSocketUrl::parse("wss://gateway-dev.flamewire.io/public/rpc/bittensor")?)
     .add_handler_group(pipeline)
     .build()
     .await?;
@@ -169,7 +205,7 @@ let parallel_handlers = HandlerGroup::parallel()
     .add(CacheUpdater);    // Update cache
 
 let mut indexer = IndexerBuilder::<SubstrateConfig>::new()
-    .connect(WebSocketUrl::parse("wss://node.url")?)
+    .connect(WebSocketUrl::parse("wss://gateway-dev.flamewire.io/public/rpc/bittensor")?)
     .add_handler_group(parallel_handlers)
     .build()
     .await?;
@@ -203,7 +239,7 @@ let conditional_group = HandlerGroup::new()
 
 ```rust
 let indexer = IndexerBuilder::<SubstrateConfig>::new()
-    .connect(WebSocketUrl::parse("wss://node.url")?)
+    .connect(WebSocketUrl::parse("wss://gateway-dev.flamewire.io/public/rpc/bittensor")?)
     // JSON storage in ./database/checkpoint.json (default)
     .build()
     .await?;
@@ -213,7 +249,7 @@ let indexer = IndexerBuilder::<SubstrateConfig>::new()
 
 ```rust
 let indexer = IndexerBuilder::<SubstrateConfig>::new()
-    .connect(WebSocketUrl::parse("wss://node.url")?)
+    .connect(WebSocketUrl::parse("wss://gateway-dev.flamewire.io/public/rpc/bittensor")?)
     .with_sqlite("sqlite://./indexer.db")
     .build()
     .await?;
@@ -223,7 +259,7 @@ let indexer = IndexerBuilder::<SubstrateConfig>::new()
 
 ```rust
 let indexer = IndexerBuilder::<SubstrateConfig>::new()
-    .connect(WebSocketUrl::parse("wss://node.url")?)
+    .connect(WebSocketUrl::parse("wss://gateway-dev.flamewire.io/public/rpc/bittensor")?)
     .with_postgres("postgres://user:password@localhost:5432/bittensor_data")
     .build()
     .await?;
@@ -235,7 +271,7 @@ let indexer = IndexerBuilder::<SubstrateConfig>::new()
 
 ```rust
 let indexer = IndexerBuilder::<SubstrateConfig>::new()
-    .connect(WebSocketUrl::parse("wss://node.url")?)
+    .connect(WebSocketUrl::parse("wss://gateway-dev.flamewire.io/public/rpc/bittensor")?)
     .start_from_block(1_000_000)  // Start from specific block
     .end_at_block(2_000_000)      // Process until this block
     .build()
@@ -462,7 +498,7 @@ let cpu_intensive = HandlerGroup::parallel()
 ```rust
 // For high-throughput scenarios, use PostgreSQL
 let indexer = IndexerBuilder::<SubstrateConfig>::new()
-    .connect(WebSocketUrl::parse("wss://node.url")?)
+    .connect(WebSocketUrl::parse("wss://gateway-dev.flamewire.io/public/rpc/bittensor")?)
     .with_postgres("postgres://user:pass@localhost/db?sslmode=require")
     .build()
     .await?;

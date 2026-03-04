@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-#[cfg(feature = "json-storage")]
 use serde_json;
 use std::error::Error as StdError;
 use thiserror::Error;
@@ -30,7 +29,6 @@ pub enum IndexerError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 
-    #[cfg(feature = "json-storage")]
     #[error("Serde JSON error: {0}")]
     SerdeJson(#[from] serde_json::Error),
 
@@ -76,6 +74,20 @@ pub enum IndexerError {
         block: u64,
         #[source]
         source: Box<subxt::Error>,
+    },
+
+    #[error("ClickHouse {operation} failed: {source}")]
+    ClickHouseError {
+        operation: String,
+        #[source]
+        source: Box<dyn StdError + Send + Sync>,
+    },
+
+    #[error("Redis {operation} failed: {source}")]
+    RedisError {
+        operation: String,
+        #[source]
+        source: Box<dyn StdError + Send + Sync>,
     },
 }
 

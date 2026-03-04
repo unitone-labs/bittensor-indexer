@@ -25,6 +25,15 @@ pub mod json;
 #[cfg(feature = "postgres")]
 pub mod postgres;
 
+#[cfg(feature = "postgres-state")]
+pub mod pg_state;
+
+#[cfg(feature = "clickhouse")]
+pub mod clickhouse;
+
+#[cfg(feature = "redis-cache")]
+pub mod redis_cache;
+
 #[cfg(feature = "sqlite")]
 pub mod sqlite;
 

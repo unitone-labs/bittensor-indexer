@@ -15,14 +15,26 @@
  */
 
 pub use crate::builder::IndexerBuilder;
+pub use crate::decoder::BittensorDecoder;
 pub use crate::config::IndexerConfig;
 pub use crate::error::IndexerError;
 pub use crate::handler::{Context, EventFilter, Handler};
 pub use crate::handler_group::HandlerGroup;
 pub use crate::indexer::Indexer;
 pub use crate::storage::CheckpointStore;
+pub use crate::types::decoded::{DecodedBlock, DecodedEvent, DecodedExtrinsic};
 pub use crate::types::{BlockNumber, ChainEvent};
 pub use crate::validated_types::{PostgresUrl, SqliteUrl, WebSocketUrl};
+
+#[cfg(feature = "postgres-state")]
+pub use crate::storage::pg_state::PostgresStateHandler;
+#[cfg(feature = "clickhouse")]
+pub use crate::storage::clickhouse::ClickHouseHandler;
+#[cfg(feature = "redis-cache")]
+pub use crate::storage::redis_cache::RedisCacheHandler;
+
+pub use crate::types::entity::{Account, Neuron, StakePosition, Subnet};
+pub use crate::types::storage_config::{ClickHouseConfig, PgStateConfig, RedisCacheConfig};
 
 pub use async_trait::async_trait;
 pub use parity_scale_codec::Decode;

@@ -16,10 +16,14 @@
 
 mod unit {
     mod test_config;
+    mod test_decoded_types;
+    mod test_decoder;
     mod test_error;
     mod test_error_scenarios;
     mod test_handler;
     mod test_handler_group;
+    mod test_live_gateway;
+    mod test_metadata;
     mod test_property_based;
     mod test_storage;
 }

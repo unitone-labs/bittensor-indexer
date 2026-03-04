@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.0] - 2026-02-18
+### Added
+
+* `DecodedBlock`, `DecodedExtrinsic`, `DecodedEvent` types in `src/types/decoded.rs` for structured block and event data.
+* `BittensorDecoder` handler in `src/decoder.rs` that decodes blocks and events into JSON-serializable types via the pipeline.
+* `serde_json` is now a required (non-optional) dependency.
+
+### Changed
+
+* Moved `src/types.rs` to `src/types/mod.rs` with new `pub mod decoded` submodule.
+* Removed `#[cfg(feature = "json-storage")]` gate from the `SerdeJson` error variant since `serde_json` is always available.
+
 ## [0.1.0] - 2025-07-10
 ### Added
 - Initial release of Flamewire Bittensor Indexer

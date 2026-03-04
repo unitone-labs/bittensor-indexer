@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+pub mod decoded;
+pub mod entity;
+pub mod storage_config;
+
 use scale_value::Composite;
 use subxt::events::EventDetails;
 use subxt::Config;
